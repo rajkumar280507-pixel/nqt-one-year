@@ -6,6 +6,7 @@ import bcryptjs from 'bcryptjs';
 import path from 'path';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
+import { exec } from 'child_process';
 import db from './db.js';
 import { authenticateToken, isAdmin } from './middleware.js';
 import { runCode } from './codeRunner.js';
@@ -125,6 +126,19 @@ async function initDB() {
       );
     `);
     console.log('Database tables successfully checked/created.');
+
+    // Check if database needs seeding
+    const topicsCheck = await db.query('SELECT COUNT(*) FROM topics');
+    if (parseInt(topicsCheck.rows[0].count) === 0) {
+      console.log('Database is empty. Running auto-seeding in background...');
+      exec('node server/seed.js', (error, stdout, stderr) => {
+        if (error) {
+          console.error(`Auto-seeding error: ${error.message}`);
+          return;
+        }
+        console.log('Auto-seeding completed successfully.');
+      });
+    }
   } catch (err) {
     console.error('Error initializing database tables:', err);
   }
