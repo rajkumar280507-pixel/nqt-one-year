@@ -77,16 +77,26 @@ This repository includes a `render.yaml` configuration that sets up the database
 ### Step-by-Step Instructions:
 
 1. **Commit and Push**: Ensure all changes are committed and pushed to your GitHub repository.
-2. **Open Render Dashboard**: Go to [Render Dashboard](https://dashboard.render.com).
-3. **Deploy Blueprint**:
-   - Click the **New +** button on the top right.
-   - Select **Blueprint** from the drop-down menu.
-   - Connect your GitHub repository containing the code.
-4. **Provision services**:
-   - Render reads the `render.yaml` file in the root.
-   - It will prompt you to name your blueprint instance.
-   - Enter your `ADMIN_EMAIL` in the prompt variable (this email will have full admin rights to edit YouTube URL videos and add questions).
-   - Click **Approve** to begin provisioning.
-5. **Execution**:
-   - Render will build the React assets (`npm run build`), launch the Express server, and create the PostgreSQL instance.
-   - Once completed, open the URL on your mobile phone, click "Add to Home Screen" to install it as a PWA, and start your 365-day preparation!
+2. **Obtain Free API Credentials**:
+   * **Groq API Key (Primary)**:
+     - Go to [Groq Console](https://console.groq.com) (free).
+     - Sign in, navigate to **API Keys**, click **Create API Key**, and copy the string (starts with `gsk_`).
+   * **Gemini API Key (Fallback)**:
+     - Go to [Google AI Studio](https://aistudio.google.com) (free).
+     - Sign in, click **Get API key** in the top menu, create a key, and copy it.
+3. **Open Render Dashboard**: Go to [Render Dashboard](https://dashboard.render.com).
+4. **Deploy Blueprint**:
+   * Click the **New +** button on the top right.
+   * Select **Blueprint** from the drop-down menu.
+   * Connect your GitHub repository (`nqt-one-year`).
+5. **Provision Services**:
+   * Render reads the `render.yaml` file in the root.
+   * It will prompt you to name your blueprint instance (e.g. `nqt-prep`).
+   * **Paste Credentials**:
+     - Paste your `GROQ_API_KEY` (starts with `gsk_`).
+     - Paste your `GEMINI_API_KEY`.
+     - Enter your `ADMIN_EMAIL` (this email will have admin rights to manage topic videos and custom questions).
+   * Click **Apply** or **Approve** to begin provisioning.
+6. **Execution**:
+   * Render will build the React assets (`npm run build`), launch the Express server, and create the PostgreSQL instance.
+   * Seeding is fully automated on first startup! Once complete, open the site on your phone, click "Add to Home Screen" to install it as a PWA, and begin your preparation!

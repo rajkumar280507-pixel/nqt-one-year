@@ -14,26 +14,7 @@ export default function Dashboard({ token, user }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
-  useEffect(() => {
-    fetchSummary();
-  }, []);
-
   const fetchSummary = async () => {
-    setLoading(true);
-    try {
-      const response = await fetch('/api/progress/summary', {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      const data = await response.json();
-      if (!response.ok) throw new Error(data.error || 'Failed to load progress summary.');
-      setSummary(data);
-    } catch (err) {
-      setError(err.message);
-    } fontName:
-    setLoading(false);
-  };
-
-  const fetchSummarySafe = async () => {
     setLoading(true);
     try {
       const response = await fetch('/api/progress/summary', {
@@ -49,9 +30,8 @@ export default function Dashboard({ token, user }) {
     }
   };
 
-  // Re-fetch using final logic block
   useEffect(() => {
-    fetchSummarySafe();
+    fetchSummary();
   }, []);
 
   if (loading) {
