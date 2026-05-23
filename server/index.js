@@ -124,6 +124,72 @@ async function initDB() {
         score_json JSONB NOT NULL,
         taken_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       );
+
+      CREATE TABLE IF NOT EXISTS stories (
+        id SERIAL PRIMARY KEY,
+        day_number INTEGER UNIQUE NOT NULL,
+        title VARCHAR(255) NOT NULL,
+        level VARCHAR(50) NOT NULL,
+        body TEXT NOT NULL,
+        vocab_terms_json JSONB NOT NULL
+      );
+
+      CREATE TABLE IF NOT EXISTS comics (
+        id SERIAL PRIMARY KEY,
+        day_number INTEGER UNIQUE NOT NULL,
+        title VARCHAR(255) NOT NULL,
+        panels_json JSONB NOT NULL
+      );
+
+      CREATE TABLE IF NOT EXISTS listening (
+        id SERIAL PRIMARY KEY,
+        day_number INTEGER UNIQUE NOT NULL,
+        title VARCHAR(255) NOT NULL,
+        transcript TEXT NOT NULL,
+        mcqs_json JSONB NOT NULL
+      );
+
+      CREATE TABLE IF NOT EXISTS vocab_cards (
+        id SERIAL PRIMARY KEY,
+        user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+        term VARCHAR(255) NOT NULL,
+        meaning TEXT NOT NULL,
+        example TEXT NOT NULL,
+        tamil_gloss VARCHAR(255),
+        hindi_gloss VARCHAR(255),
+        leitner_box INTEGER DEFAULT 1,
+        next_review_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        source VARCHAR(100),
+        UNIQUE (user_id, term)
+      );
+
+      CREATE TABLE IF NOT EXISTS ai_messages (
+        id SERIAL PRIMARY KEY,
+        user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+        role VARCHAR(50) NOT NULL,
+        content TEXT NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+
+      CREATE TABLE IF NOT EXISTS dsa_lessons (
+        slug VARCHAR(255) PRIMARY KEY,
+        title VARCHAR(255) NOT NULL,
+        topic VARCHAR(255) NOT NULL,
+        narration_frames_json JSONB NOT NULL,
+        animation_frames_json JSONB NOT NULL,
+        code_by_lang_json JSONB NOT NULL,
+        broken_version_by_lang_json JSONB NOT NULL,
+        test_cases_json JSONB NOT NULL
+      );
+
+      CREATE TABLE IF NOT EXISTS speaking_attempts (
+        id SERIAL PRIMARY KEY,
+        user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+        prompt TEXT NOT NULL,
+        transcript TEXT NOT NULL,
+        ai_feedback_json JSONB NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
     `);
     console.log('Database tables successfully checked/created.');
 
@@ -836,6 +902,357 @@ app.post('/api/admin/coding-problems', authenticateToken, isAdmin, async (req, r
       );
       res.json(result.rows[0]);
     }
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ==========================================
+// AI Tutor Chat & Speech Evaluators
+// ==========================================
+app.post('/api/ai/chat', authenticateToken, async (req, res) => {
+  const { messages } = req.body;
+  if (!messages || !Array.isArray(messages)) {
+    return res.status(400).json({ error: 'Messages array is required.' });
+  }
+
+  const userId = req.user.id;
+
+  try {
+    // 1. Rate limiting check (50 requests/day per user)
+    const limitCheck = await db.query(
+      `SELECT COUNT(*) FROM ai_messages WHERE user_id = $1 AND role = 'user' AND created_at >= CURRENT_DATE`,
+      [userId]
+    );
+    const messageCount = parseInt(limitCheck.rows[0].count);
+    if (messageCount >= 50) {
+      return res.status(429).json({
+        error: 'Daily AI response limit (50 messages) reached. Try again tomorrow, or practice vocabulary cards below!'
+      });
+    }
+
+    const systemInstruction = `You are a kind, patient English-language tutor and TCS-NQT exam coach for a beginner Indian engineering student. Use simple English, max 12 words per sentence. If the student writes in Tamil or Hindi, gently reply in English with a one-line meaning, and encourage them to try again in English. Never make them feel bad. Praise effort. When they ask a math/coding/reasoning question, explain step by step with a tiny example first. Refuse to give exam answers if they describe a live test; otherwise help freely. IMPORTANT: You MUST append a vocabulary helper list in the format "[Words to learn: word1, word2]" at the very end of your response listing 2-3 new vocabulary words used in your reply.`;
+
+    const normalizedMessages = [
+      { role: 'system', content: systemInstruction },
+      ...messages.map(m => ({ role: m.role, content: m.content }))
+    ];
+
+    // Save user message to database
+    const lastUserMsg = messages[messages.length - 1];
+    if (lastUserMsg && lastUserMsg.role === 'user') {
+      await db.query(
+        'INSERT INTO ai_messages (user_id, role, content) VALUES ($1, $2, $3)',
+        [userId, 'user', lastUserMsg.content]
+      );
+    }
+
+    let replyText = '';
+    let apiSuccess = false;
+
+    // Call Primary AI: Groq API
+    if (process.env.GROQ_API_KEY) {
+      try {
+        const groqRes = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${process.env.GROQ_API_KEY}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            model: 'llama-3.1-8b-instant',
+            messages: normalizedMessages,
+            temperature: 0.7
+          })
+        });
+
+        if (groqRes.ok) {
+          const groqData = await groqRes.json();
+          replyText = groqData.choices[0].message.content;
+          apiSuccess = true;
+        } else {
+          console.warn(`Groq API returned status ${groqRes.status}. Trying Gemini fallback...`);
+        }
+      } catch (err) {
+        console.error('Groq API error. Trying Gemini fallback...', err);
+      }
+    }
+
+    // Call Fallback AI: Google Gemini API
+    if (!apiSuccess && process.env.GEMINI_API_KEY) {
+      try {
+        const serializedPrompt = normalizedMessages.map(m => {
+          if (m.role === 'system') return `System Instructions:\n${m.content}\n`;
+          return `${m.role === 'user' ? 'Student' : 'Tutor'}: ${m.content}`;
+        }).join('\n\n') + '\n\nTutor:';
+
+        const geminiRes = await fetch(
+          `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${process.env.GEMINI_API_KEY}`,
+          {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+              contents: [{
+                parts: [{ text: serializedPrompt }]
+              }]
+            })
+          }
+        );
+
+        if (geminiRes.ok) {
+          const geminiData = await geminiRes.json();
+          replyText = geminiData.candidates[0].content.parts[0].text;
+          apiSuccess = true;
+        } else {
+          console.error(`Gemini API returned status ${geminiRes.status}`);
+        }
+      } catch (err) {
+        console.error('Gemini API error:', err);
+      }
+    }
+
+    if (!apiSuccess) {
+      replyText = "I need a short rest. Try again in a few minutes. [Words to learn: patience, resilience]";
+    }
+
+    // Parse the vocabulary list from the footer: [Words to learn: word1, word2]
+    let suggestedVocab = [];
+    const vocabMatch = replyText.match(/\[Words to learn:\s*([^\]]+)\]/i);
+    if (vocabMatch) {
+      suggestedVocab = vocabMatch[1].split(',').map(w => w.trim());
+      replyText = replyText.replace(/\[Words to learn:\s*[^\]]+\]/i, '').trim();
+    }
+
+    // Save AI response to database
+    await db.query(
+      'INSERT INTO ai_messages (user_id, role, content) VALUES ($1, $2, $3)',
+      [userId, 'assistant', replyText]
+    );
+
+    res.json({ reply: replyText, suggestedVocab });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.post('/api/ai/grade-speaking', authenticateToken, async (req, res) => {
+  const { prompt, transcript } = req.body;
+  if (!prompt || !transcript) {
+    return res.status(400).json({ error: 'Prompt and transcript are required.' });
+  }
+
+  const userId = req.user.id;
+
+  const gradingPrompt = `You are a professional English language tutor. Grade this student response:
+Prompt question: "${prompt}"
+Student transcript: "${transcript}"
+
+Analyze grammar and vocabulary, and return ONLY a valid JSON object matching this schema:
+{
+  "corrections": [
+    { "original": "incorrect speech part", "corrected": "corrected speech part", "explanation": "one sentence explanation" }
+  ],
+  "vocabSuggestions": [
+    { "original": "simple word used", "suggested": "advanced word", "reason": "why this is better" }
+  ],
+  "pronunciationFeedback": "General advice e.g. pronounce past-tense words clearly.",
+  "modelAnswer": "A clean, professional sample answer of 50-70 words."
+}
+Only output the raw JSON object. Do not wrap in markdown \`\`\`json blocks.`;
+
+  let responseData = null;
+  let apiSuccess = false;
+
+  // Primary: Groq API
+  if (process.env.GROQ_API_KEY) {
+    try {
+      const groqRes = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${process.env.GROQ_API_KEY}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          model: 'llama-3.1-8b-instant',
+          messages: [{ role: 'user', content: gradingPrompt }],
+          response_format: { type: "json_object" },
+          temperature: 0.2
+        })
+      });
+
+      if (groqRes.ok) {
+        const groqData = await groqRes.json();
+        responseData = JSON.parse(groqData.choices[0].message.content);
+        apiSuccess = true;
+      }
+    } catch (err) {
+      console.error('Groq grading error. Falling back to Gemini...', err);
+    }
+  }
+
+  // Fallback: Gemini API
+  if (!apiSuccess && process.env.GEMINI_API_KEY) {
+    try {
+      const geminiRes = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${process.env.GEMINI_API_KEY}`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            contents: [{ parts: [{ text: gradingPrompt }] }]
+          })
+        }
+      );
+
+      if (geminiRes.ok) {
+        const geminiData = await geminiRes.json();
+        let rawText = geminiData.candidates[0].content.parts[0].text;
+        rawText = rawText.replace(/```json/i, '').replace(/```/g, '').trim();
+        responseData = JSON.parse(rawText);
+        apiSuccess = true;
+      }
+    } catch (err) {
+      console.error('Gemini grading error:', err);
+    }
+  }
+
+  if (!apiSuccess) {
+    responseData = {
+      corrections: [],
+      vocabSuggestions: [],
+      pronunciationFeedback: "AI grading services are currently offline. Keep practicing!",
+      modelAnswer: "English practice is the key to software recruitment success."
+    };
+  }
+
+  try {
+    await db.query(
+      `INSERT INTO speaking_attempts (user_id, prompt, transcript, ai_feedback_json) VALUES ($1, $2, $3, $4)`,
+      [userId, prompt, transcript, JSON.stringify(responseData)]
+    );
+    res.json(responseData);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ==========================================
+// Leitner Vocabulary Deck APIs
+// ==========================================
+app.post('/api/vocab/add', authenticateToken, async (req, res) => {
+  const { term, meaning, example, tamil_gloss, hindi_gloss, source } = req.body;
+  if (!term || !meaning || !example) {
+    return res.status(400).json({ error: 'Term, meaning, and example are required.' });
+  }
+
+  try {
+    const result = await db.query(
+      `INSERT INTO vocab_cards (user_id, term, meaning, example, tamil_gloss, hindi_gloss, source)
+       VALUES ($1, $2, $3, $4, $5, $6, $7)
+       ON CONFLICT (user_id, term) DO UPDATE 
+       SET meaning = EXCLUDED.meaning, example = EXCLUDED.example
+       RETURNING *`,
+      [req.user.id, term, meaning, example, tamil_gloss || null, hindi_gloss || null, source || 'manual']
+    );
+    res.json(result.rows[0]);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.get('/api/vocab/due', authenticateToken, async (req, res) => {
+  try {
+    const result = await db.query(
+      `SELECT * FROM vocab_cards 
+       WHERE user_id = $1 AND next_review_date <= NOW() 
+       ORDER BY leitner_box DESC, next_review_date ASC
+       LIMIT 10`,
+      [req.user.id]
+    );
+    res.json(result.rows);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.post('/api/vocab/review', authenticateToken, async (req, res) => {
+  const { cardId, correct } = req.body;
+  if (cardId === undefined || correct === undefined) {
+    return res.status(400).json({ error: 'cardId and correct status are required.' });
+  }
+
+  try {
+    const cardRes = await db.query(
+      'SELECT id, leitner_box FROM vocab_cards WHERE id = $1 AND user_id = $2',
+      [cardId, req.user.id]
+    );
+    if (cardRes.rows.length === 0) {
+      return res.status(404).json({ error: 'Vocabulary card not found.' });
+    }
+
+    const currentBox = cardRes.rows[0].leitner_box;
+    let nextBox = 1;
+    let daysToAdd = 1;
+
+    if (correct) {
+      nextBox = Math.min(5, currentBox + 1);
+      daysToAdd = Math.pow(2, nextBox - 1);
+    }
+
+    const result = await db.query(
+      `UPDATE vocab_cards 
+       SET leitner_box = $1, next_review_date = NOW() + INTERVAL '${daysToAdd} days'
+       WHERE id = $2 AND user_id = $3
+       RETURNING *`,
+      [nextBox, cardId, req.user.id]
+    );
+    res.json(result.rows[0]);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ==========================================
+// English Modules & DSA Lab Curriculum APIs
+// ==========================================
+app.get('/api/english/story/:dayNumber', authenticateToken, async (req, res) => {
+  try {
+    const day = parseInt(req.params.dayNumber);
+    const storyRes = await db.query('SELECT * FROM stories WHERE day_number = $1', [day]);
+    const comicRes = await db.query('SELECT * FROM comics WHERE day_number = $1', [day]);
+    res.json({
+      story: storyRes.rows[0] || null,
+      comic: comicRes.rows[0] || null
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.get('/api/english/listening/:dayNumber', authenticateToken, async (req, res) => {
+  try {
+    const day = parseInt(req.params.dayNumber);
+    const result = await db.query('SELECT * FROM listening WHERE day_number = $1', [day]);
+    if (result.rows.length === 0) {
+      return res.json(null);
+    }
+    res.json(result.rows[0]);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.get('/api/dsa/lesson/:slug', authenticateToken, async (req, res) => {
+  try {
+    const result = await db.query('SELECT * FROM dsa_lessons WHERE slug = $1', [req.params.slug]);
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'DSA animated lesson not found.' });
+    }
+    res.json(result.rows[0]);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
