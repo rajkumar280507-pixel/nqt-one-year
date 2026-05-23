@@ -39,12 +39,76 @@ const vocabCardsMemory = [];
 const submissionsMemory = [];
 const attemptsMemory = [];
 
+const mockTopics = [
+  { id: 1, section: "Aptitude", name: "Number System", definition: "Integers, prime numbers, rational numbers, cyclicity, unit digit calculations.", questions_count: 5 },
+  { id: 2, section: "Aptitude", name: "LCM & HCF", definition: "Least Common Multiple and Highest Common Factor relationships and word problems.", questions_count: 4 },
+  { id: 3, section: "Aptitude", name: "Divisibility Rules", definition: "Determining whether an integer is divisible by a fixed divisor quickly.", questions_count: 3 },
+  { id: 4, section: "Aptitude", name: "Percentages", definition: "Calculations of percentage increase/decrease, salaries, and index fractions.", questions_count: 6 },
+  { id: 5, section: "Aptitude", name: "Profit & Loss", definition: "Cost price, selling price, marked price, discounts, and dealers.", questions_count: 5 },
+  { id: 6, section: "Reasoning", name: "Coding-Decoding", definition: "Identifying alphanumeric shifts and substitution patterns to translate code.", questions_count: 8 },
+  { id: 7, section: "Reasoning", name: "Blood Relations", definition: "Decoding family trees and relations.", questions_count: 4 },
+  { id: 8, section: "Reasoning", name: "Direction Sense", definition: "Navigating directions, degrees, and shortest path calculations.", questions_count: 5 },
+  { id: 9, section: "Verbal", name: "Synonyms & Antonyms", definition: "Identifying lexical meanings and word similarities in context.", questions_count: 10 },
+  { id: 10, section: "Verbal", name: "Sentence Correction", definition: "Grammar rules, subject-verb agreements, and words replacement.", questions_count: 7 },
+  { id: 11, section: "Programming Logic", name: "Loops and Control Flow", definition: "For, while, and do-while loops, break/continue statements.", questions_count: 5 },
+  { id: 12, section: "Coding", name: "1-D Arrays Traversal", definition: "Iterating through single-dimensional arrays to find min, max, or sum.", questions_count: 4 },
+  { id: 13, section: "Coding", name: "String Operations", definition: "Length calculation, reversals, palindromes, and anagram checks.", questions_count: 3 }
+];
+
 function runMockQuery(text, params = []) {
   const queryText = text.trim().toLowerCase();
 
-  // 1. Topics Check (prevent seeder process looping)
+  // 1. Topics Check and Topics Queries
   if (queryText.includes('select count(*)') && queryText.includes('topics')) {
     return { rows: [{ count: 99 }], rowCount: 1 };
+  }
+
+  if (queryText.includes('select t.*, count(q.id) as questions_count')) {
+    return { rows: mockTopics, rowCount: mockTopics.length };
+  }
+
+  if (queryText.includes('select * from topics where id =')) {
+    const id = params[0];
+    const topic = mockTopics.find(t => t.id === id);
+    return { rows: topic ? [topic] : [], rowCount: topic ? 1 : 0 };
+  }
+
+  if (queryText.includes('where d.concept_topic_id =')) {
+    return {
+      rows: [
+        { id: 101, day_number: 1, section: "Aptitude", difficulty: "Easy", question_text: "Which of the following is a prime number?", options_json: ["2", "4", "6", "8"] },
+        { id: 102, day_number: 1, section: "Aptitude", difficulty: "Medium", question_text: "Find the unit digit of 3^41.", options_json: ["1", "3", "7", "9"] }
+      ],
+      rowCount: 2
+    };
+  }
+
+  // Mock tests list query
+  if (queryText.includes('from mock_tests')) {
+    const mocksList = [];
+    for (let m = 1; m <= 12; m++) {
+      mocksList.push({
+        id: m,
+        month: m,
+        name: `NQT Monthly Full Mock Test - Month ${m}`,
+        sections_json: {
+          foundation: { duration_minutes: 75, total_questions: 65, sections: [{ name: 'Numerical Ability', count: 20 }, { name: 'Reasoning Ability', count: 25 }, { name: 'Verbal Ability', count: 20 }] },
+          advanced: { duration_minutes: 115, mcq_count: 15, coding_count: 2 }
+        }
+      });
+    }
+    return { rows: mocksList, rowCount: mocksList.length };
+  }
+
+  if (queryText.includes('from user_mock_attempts')) {
+    const list = attemptsMemory.filter(a => a.user_id === params[0]);
+    return { rows: list, rowCount: list.length };
+  }
+
+  if (queryText.includes('insert into user_mock_attempts')) {
+    const attempt = { id: attemptsMemory.length + 1, user_id: params[0], mock_test_id: params[1], score_json: params[2], taken_at: new Date() };
+    attemptsMemory.push(attempt);
+    return { rows: [attempt], rowCount: 1 };
   }
 
   // 2. User Authentication Queries
