@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { Sun, Moon, Flame, Menu, X, LogOut, BookOpen, Calendar, BarChart2, Code, ShieldAlert, Award } from 'lucide-react';
+import { Sun, Moon, Flame, Menu, X, LogOut, BookOpen, Calendar, BarChart2, Code, ShieldAlert, Award, Sparkles } from 'lucide-react';
 
 export default function Navbar({ user, logout, darkMode, setDarkMode }) {
   const [isOpen, setIsOpen] = useState(false);
@@ -14,11 +14,13 @@ export default function Navbar({ user, logout, darkMode, setDarkMode }) {
 
   const navItems = [
     { label: 'Today', path: '/today', icon: BookOpen },
-    { label: 'Calendar', path: '/calendar', icon: Calendar },
-    { label: 'Topics', path: '/topics', icon: Award },
-    { label: 'Coding Bank', path: '/coding', icon: Code },
+    { label: 'DSA Lab', path: '/dsa-lab', icon: Code },
+    { label: 'English', path: '/english', icon: Award },
+    { label: 'AI Tutor', path: '/ai-tutor', icon: Sparkles },
+    { label: 'Progress', path: '/dashboard', icon: BarChart2 },
+    { label: 'Topics Library', path: '/topics', icon: BookOpen },
     { label: 'Mock Tests', path: '/mock-tests', icon: Award },
-    { label: 'Dashboard', path: '/dashboard', icon: BarChart2 },
+    { label: 'Calendar', path: '/calendar', icon: Calendar },
   ];
 
   const adminEmail = import.meta.env.VITE_ADMIN_EMAIL || 'admin@nqt.com';
@@ -143,7 +145,7 @@ export default function Navbar({ user, logout, darkMode, setDarkMode }) {
       {/* Mobile Drawer */}
       {isOpen && (
         <div className="md:hidden border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-4 pt-2 pb-4 space-y-1">
-          {navItems.map((item) => {
+          {navItems.slice(5).map((item) => {
             const Icon = item.icon;
             const isActive = location.pathname === item.path;
             return (
@@ -195,6 +197,28 @@ export default function Navbar({ user, logout, darkMode, setDarkMode }) {
           )}
         </div>
       )}
+
+      {/* Mobile Bottom Tab Navigation */}
+      <div className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-t border-slate-200 dark:border-slate-800 flex justify-around items-center h-16 px-2 shadow-lg transition-colors duration-200">
+        {navItems.slice(0, 5).map((item) => {
+          const Icon = item.icon;
+          const isActive = location.pathname === item.path;
+          return (
+            <Link
+              key={item.path}
+              to={item.path}
+              className={`flex flex-col items-center justify-center flex-1 h-full text-[10px] font-bold transition-all duration-150 ${
+                isActive
+                  ? 'text-primary-600 dark:text-primary-400 font-extrabold'
+                  : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100'
+              }`}
+            >
+              <Icon className="w-5 h-5 mb-1" />
+              <span>{item.label}</span>
+            </Link>
+          );
+        })}
+      </div>
     </nav>
   );
 }

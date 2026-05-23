@@ -10,6 +10,9 @@ import Coding from './pages/Coding';
 import MockTests from './pages/MockTests';
 import Dashboard from './pages/Dashboard';
 import Admin from './pages/Admin';
+import DsaLab from './pages/DsaLab';
+import English from './pages/English';
+import AiTutor from './pages/AiTutor';
 
 export default function App() {
   const [token, setToken] = useState(localStorage.getItem('token') || '');
@@ -61,7 +64,7 @@ export default function App() {
           />
         )}
         
-        <main className="flex-1 w-full">
+        <main className="flex-1 w-full pb-16 md:pb-0">
           <Routes>
             {/* Public Routes */}
             <Route 
@@ -97,6 +100,18 @@ export default function App() {
             <Route 
               path="/dashboard" 
               element={isAuthenticated ? <Dashboard token={token} user={user} /> : <Navigate to="/login" />} 
+            />
+            <Route 
+              path="/dsa-lab" 
+              element={isAuthenticated ? <DsaLab token={token} /> : <Navigate to="/login" />} 
+            />
+            <Route 
+              path="/english" 
+              element={isAuthenticated ? <English token={token} user={user} /> : <Navigate to="/login" />} 
+            />
+            <Route 
+              path="/ai-tutor" 
+              element={isAuthenticated ? <AiTutor token={token} user={user} /> : <Navigate to="/login" />} 
             />
 
             {/* Admin Route */}
