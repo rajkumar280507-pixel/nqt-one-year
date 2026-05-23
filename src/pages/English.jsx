@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { 
-  Mic, BookOpen, Volume2, Award, AlertCircle, Play, Pause, 
-  RotateCcw, Sparkles, Plus, Check, ChevronRight, X, Headphones, 
+import {
+  Mic, BookOpen, Volume2, Award, AlertCircle, Play, Pause,
+  RotateCcw, Sparkles, Plus, Check, ChevronRight, X, Headphones,
   VolumeX, HelpCircle, GraduationCap, Star, ArrowRight, BookMarked
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -34,10 +34,10 @@ export default function English({ token, user }) {
         {/* Day Selector */}
         <div className="flex items-center gap-2 bg-white dark:bg-slate-900 px-4 py-2 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm self-start">
           <span className="text-xs font-bold text-slate-500">Practice Day:</span>
-          <input 
-            type="number" 
-            min="1" 
-            max="365" 
+          <input
+            type="number"
+            min="1"
+            max="365"
             value={dayNumber}
             onChange={(e) => setDayNumber(Math.max(1, Math.min(365, parseInt(e.target.value) || 1)))}
             className="w-16 px-2 py-1 text-center font-bold text-sm bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-lg focus:outline-none focus:ring-1 focus:ring-primary-500"
@@ -58,11 +58,10 @@ export default function English({ token, user }) {
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              className={`pb-3 text-xs font-bold flex items-center gap-1.5 border-b-2 whitespace-nowrap transition-all ${
-                activeTab === tab.id
+              className={`pb-3 text-xs font-bold flex items-center gap-1.5 border-b-2 whitespace-nowrap transition-all ${activeTab === tab.id
                   ? 'border-primary-600 text-primary-600 dark:text-primary-400 font-extrabold'
                   : 'border-transparent text-slate-500 hover:text-slate-700'
-              }`}
+                }`}
             >
               <Icon className="w-4 h-4" /> {tab.label}
             </button>
@@ -209,11 +208,10 @@ function SpeakingTab({ token }) {
                   setFeedback(null);
                   setErrorMsg('');
                 }}
-                className={`px-3 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition border ${
-                  selectedPrompt === p.text 
-                    ? 'bg-primary-600 border-transparent text-white' 
+                className={`px-3 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition border ${selectedPrompt === p.text
+                    ? 'bg-primary-600 border-transparent text-white'
                     : 'bg-slate-50 dark:bg-slate-950 border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-100'
-                }`}
+                  }`}
               >
                 {p.id.toUpperCase()}
               </button>
@@ -249,11 +247,10 @@ function SpeakingTab({ token }) {
             <div className="flex gap-2">
               <button
                 onClick={handleRecordToggle}
-                className={`px-4 py-3 rounded-xl text-xs font-bold flex items-center gap-2 border transition ${
-                  isRecording 
-                    ? 'bg-red-50 dark:bg-red-950/20 border-red-200 text-red-600' 
+                className={`px-4 py-3 rounded-xl text-xs font-bold flex items-center gap-2 border transition ${isRecording
+                    ? 'bg-red-50 dark:bg-red-950/20 border-red-200 text-red-600'
                     : 'bg-primary-50 dark:bg-primary-950/20 border-primary-200 text-primary-600 hover:bg-primary-100'
-                }`}
+                  }`}
               >
                 <Mic className={`w-4 h-4 ${isRecording ? 'animate-pulse' : ''}`} />
                 {isRecording ? 'Stop Recording' : 'Start Recording'}
@@ -404,11 +401,10 @@ function SpeakingTab({ token }) {
                           setShadowIdx(idx);
                           handleSpeakText(sentence);
                         }}
-                        className={`w-full text-left p-2 rounded-lg text-[11px] font-medium transition flex items-center justify-between border ${
-                          shadowIdx === idx 
-                            ? 'bg-primary-50 border-primary-200 dark:bg-primary-950/20 text-primary-600' 
+                        className={`w-full text-left p-2 rounded-lg text-[11px] font-medium transition flex items-center justify-between border ${shadowIdx === idx
+                            ? 'bg-primary-50 border-primary-200 dark:bg-primary-950/20 text-primary-600'
                             : 'bg-white dark:bg-slate-900 border-slate-100 dark:border-slate-850 hover:bg-slate-50'
-                        }`}
+                          }`}
                       >
                         <span>{sentence.trim()}.</span>
                         <Volume2 className="w-3 h-3 flex-shrink-0 opacity-60" />
@@ -594,9 +590,8 @@ function ListeningTab({ token, dayNumber }) {
               <div className="flex items-center gap-3">
                 <button
                   onClick={handlePlayPause}
-                  className={`p-4 rounded-full text-white transition flex items-center justify-center ${
-                    isPlaying ? 'bg-amber-500 hover:bg-amber-600' : 'bg-primary-600 hover:bg-primary-700'
-                  }`}
+                  className={`p-4 rounded-full text-white transition flex items-center justify-center ${isPlaying ? 'bg-amber-500 hover:bg-amber-600' : 'bg-primary-600 hover:bg-primary-700'
+                    }`}
                 >
                   {isPlaying ? <Pause className="w-5 h-5 fill-current" /> : <Play className="w-5 h-5 fill-current ml-0.5" />}
                 </button>
@@ -638,11 +633,10 @@ function ListeningTab({ token, dayNumber }) {
                     setCurrentSentenceIdx(idx);
                     setIsPlaying(true);
                   }}
-                  className={`cursor-pointer px-1 py-0.5 rounded transition ${
-                    currentSentenceIdx === idx
+                  className={`cursor-pointer px-1 py-0.5 rounded transition ${currentSentenceIdx === idx
                       ? 'bg-amber-100 text-slate-900 font-extrabold shadow-sm dark:bg-amber-900/30 dark:text-white border-b-2 border-amber-400'
                       : 'hover:bg-slate-100 dark:hover:bg-slate-900'
-                  }`}
+                    }`}
                 >
                   {sentence.trim()}.{' '}
                 </span>
@@ -733,7 +727,7 @@ function ReadingTab({ token, dayNumber }) {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
-  
+
   // Vocabulary Hover / Detail popover state
   const [hoveredVocab, setHoveredVocab] = useState(null);
   const [vocabCoords, setVocabCoords] = useState({ x: 0, y: 0 });
@@ -876,7 +870,7 @@ function ReadingTab({ token, dayNumber }) {
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 relative">
-      
+
       {/* Popover overlay for hovered vocabulary */}
       <AnimatePresence>
         {hoveredVocab && (
@@ -898,9 +892,9 @@ function ReadingTab({ token, dayNumber }) {
               <span className="font-extrabold text-slate-900 dark:text-white capitalize text-sm">{hoveredVocab.term}</span>
               <span className="text-[10px] text-primary-500 font-extrabold uppercase">Vocab Card</span>
             </div>
-            
+
             <p className="text-slate-500 font-medium leading-relaxed mb-3">{hoveredVocab.meaning}</p>
-            
+
             {/* Bilingual Hints */}
             <div className="bg-slate-50 dark:bg-slate-950 p-2 rounded-xl border border-slate-100 dark:border-slate-850 space-y-1 mb-3">
               <div className="text-[10px] font-bold text-slate-400">BILINGUAL MEANINGS:</div>
@@ -961,11 +955,10 @@ function ReadingTab({ token, dayNumber }) {
         <div className="space-y-6">
           {data.comic?.panels_json?.length > 0 ? (
             data.comic.panels_json.map((panel, idx) => (
-              <div 
-                key={idx} 
-                className={`flex gap-3 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-850 rounded-2xl p-4 relative ${
-                  idx % 2 === 1 ? 'flex-row-reverse bg-primary-50/10' : ''
-                }`}
+              <div
+                key={idx}
+                className={`flex gap-3 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-850 rounded-2xl p-4 relative ${idx % 2 === 1 ? 'flex-row-reverse bg-primary-50/10' : ''
+                  }`}
               >
                 {/* Character Avatar */}
                 <div className="flex flex-col items-center justify-center flex-shrink-0 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-2.5 rounded-2xl h-16 w-16 shadow-sm self-start">
@@ -978,7 +971,7 @@ function ReadingTab({ token, dayNumber }) {
                   <p className="text-xs font-semibold text-slate-800 dark:text-slate-100 leading-relaxed bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-900 p-3 rounded-2xl shadow-sm relative">
                     {panel.text}
                   </p>
-                  
+
                   {/* Local Language translation */}
                   <p className="text-[10px] text-slate-450 dark:text-slate-400 leading-normal pl-2 border-l-2 border-primary-400 italic">
                     {panel.translation}
@@ -1006,11 +999,11 @@ function VocabTab({ token }) {
   const [dueCards, setDueCards] = useState([]);
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
-  
+
   // Flashcard states
   const [currentIdx, setCurrentIdx] = useState(0);
   const [isFlipped, setIsFlipped] = useState(false);
-  
+
   // Custom manual vocabulary add form
   const [showAddForm, setShowAddForm] = useState(false);
   const [newTerm, setNewTerm] = useState('');
@@ -1059,9 +1052,9 @@ function VocabTab({ token }) {
       });
 
       if (!res.ok) throw new Error('Submission error');
-      
+
       confetti({ particleCount: 10, spread: 20 });
-      
+
       // Move to next card
       setIsFlipped(false);
       setTimeout(() => {
@@ -1098,14 +1091,14 @@ function VocabTab({ token }) {
       });
 
       if (!res.ok) throw new Error('API failure adding card');
-      
+
       setAddFeedback('🟢 Word added to deck successfully!');
       setNewTerm('');
       setNewMeaning('');
       setNewExample('');
       setTamilGloss('');
       setHindiGloss('');
-      
+
       // Reload card list
       fetchDueCards();
       setTimeout(() => {
@@ -1153,7 +1146,7 @@ function VocabTab({ token }) {
                   No vocab cards are currently due for review. Tap 'Add Word Card' or read stories to build your stack!
                 </p>
               </div>
-              <button 
+              <button
                 onClick={fetchDueCards}
                 className="px-4 py-2.5 bg-primary-600 hover:bg-primary-700 text-white rounded-xl text-xs font-bold"
               >
@@ -1170,7 +1163,7 @@ function VocabTab({ token }) {
               </div>
 
               {/* Flashcard Frame */}
-              <div 
+              <div
                 onClick={() => setIsFlipped(!isFlipped)}
                 className="w-full min-h-[220px] bg-slate-50 dark:bg-slate-950 border border-slate-250/30 rounded-2xl flex flex-col items-center justify-center p-6 text-center cursor-pointer relative hover:shadow-md transition duration-200 overflow-hidden"
               >
@@ -1269,7 +1262,7 @@ function VocabTab({ token }) {
 
         {/* Add Card Form */}
         {showAddForm && (
-          <form 
+          <form
             onSubmit={handleAddManualCard}
             className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 shadow-sm space-y-4 animate-in slide-in-from-top duration-200"
           >
