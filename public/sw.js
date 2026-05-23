@@ -3,10 +3,7 @@ const ASSETS_TO_CACHE = [
   '/',
   '/index.html',
   '/manifest.json',
-  '/logo.svg',
-  '/src/main.jsx',
-  '/src/index.css',
-  '/src/App.jsx'
+  '/logo.svg'
 ];
 
 self.addEventListener('install', (event) => {
@@ -53,7 +50,8 @@ self.addEventListener('fetch', (event) => {
         return networkResponse;
       }).catch(() => {
         // Fallback for offline pages
-        if (event.request.headers.get('accept').includes('text/html')) {
+        const acceptHeader = event.request.headers.get('accept');
+        if (acceptHeader && acceptHeader.includes('text/html')) {
           return caches.match('/index.html');
         }
       });
