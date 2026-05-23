@@ -133,7 +133,7 @@ async function seed() {
   try {
     // Clear existing data
     console.log('Clearing database tables...');
-    await db.query('TRUNCATE user_mock_attempts, mock_tests, user_code_submissions, user_progress, coding_problems, questions, days, vocabulary, topics, users CASCADE');
+    await db.query('TRUNCATE user_mock_attempts, mock_tests, user_code_submissions, user_progress, coding_problems, questions, days, vocabulary, topics, users, stories, comics, listening, dsa_lessons CASCADE');
     console.log('Database cleared.');
 
     // 1. Insert Topics
@@ -725,6 +725,133 @@ async function seed() {
       ]);
     }
     console.log('Seeded 12 mock tests.');
+
+    // 6. Seed 60 Stories & Comics
+    console.log('Seeding 60 stories & comics...');
+    for (let d = 1; d <= 60; d++) {
+      const title = `IT Placement Journey - Day ${d}`;
+      const level = d <= 30 ? 'Beginner (A2)' : 'Intermediate (B1)';
+      const body = `Anish is practicing his english skills today. He writes clean source code. He does not fear compile errors. Errors are just helpful messages. He fixes his loop counter. He will pass his placement exams.`;
+      const vocab = [
+        { term: 'practice', meaning: 'Perform an activity repeatedly to improve skills.', tamil: 'பயிற்சி செய்', hindi: 'अभ्यास करना' },
+        { term: 'compile error', meaning: 'An error reported by compiler during program translation.', tamil: 'தொகுப்பு பிழை', hindi: 'संकलन त्रुटி' },
+        { term: 'counter', meaning: 'A variable used to keep track of iterations.', tamil: 'எண்ணி (மாறி)', hindi: 'काउंटर' }
+      ];
+
+      await db.query(`
+        INSERT INTO stories (day_number, title, level, body, vocab_terms_json)
+        VALUES ($1, $2, $3, $4, $5)
+        ON CONFLICT (day_number) DO NOTHING
+      `, [d, title, level, body, JSON.stringify(vocab)]);
+
+      const panels = [
+        { character: 'Anish', avatar: '👨‍💻', text: `I am writing code for Day ${d}. It works!`, translation: `நான் நாள் ${d} க்கான குறியீட்டை எழுதுகிறேன். அது வேலை செய்கிறது!` },
+        { character: 'Tutor', avatar: '🤖', text: `Excellent work! Your code variables look clean.`, translation: `சிறந்த வேலை! உங்கள் மாறி பெயர்கள் தெளிவாக உள்ளன.` }
+      ];
+
+      await db.query(`
+        INSERT INTO comics (day_number, title, panels_json)
+        VALUES ($1, $2, $3)
+        ON CONFLICT (day_number) DO NOTHING
+      `, [d, `Anish learns variables - Day ${d}`, JSON.stringify(panels)]);
+    }
+
+    // 7. Seed 30 Listening Sessions
+    console.log('Seeding 30 listening sessions...');
+    for (let d = 1; d <= 30; d++) {
+      const title = `Listening Skill - Session ${d}`;
+      const transcript = `Continuous delivery is a software engineering approach. Teams produce software in short cycles. This ensures that software can be reliably released. It reduces the risk and cost of release cycles.`;
+      const mcqs = [
+        {
+          question: "What is continuous delivery?",
+          options: ["A software engineering approach", "A manual testing tool", "A database server storage method", "A cloud security protocol"],
+          correct: "A software engineering approach",
+          explanation: "Continuous delivery is described as a software engineering approach in the transcript."
+        },
+        {
+          question: "How do teams produce software in continuous delivery?",
+          options: ["In very long cycles", "In short cycles", "Without testing any code", "Using local server copies"],
+          correct: "In short cycles",
+          explanation: "The transcript mentions teams produce software in short cycles."
+        }
+      ];
+
+      await db.query(`
+        INSERT INTO listening (day_number, title, transcript, mcqs_json)
+        VALUES ($1, $2, $3, $4)
+        ON CONFLICT (day_number) DO NOTHING
+      `, [d, title, transcript, JSON.stringify(mcqs)]);
+    }
+
+    // 8. Seed DSA Animated Lessons (matched to DsaLab)
+    console.log('Seeding DSA animated lessons...');
+    const dsaLessons = [
+      {
+        slug: 'linear-search',
+        title: 'Linear Search',
+        topic: 'Searching',
+        narration: ['Start at index 0.', 'Target not found at index 0. Move to index 1.', 'Target found!'],
+        animation: [{ active: 0 }, { active: 1 }, { active: 1, found: true }],
+        code: { python: 'def search(arr, k): ...' },
+        broken: { python: 'def search(arr, k): ...' },
+        test_cases: { python: '...' }
+      },
+      {
+        slug: 'binary-search',
+        title: 'Binary Search',
+        topic: 'Searching',
+        narration: ['Low=0, High=6, Mid=3.', 'Mid value is smaller. Move low to 4.', 'Found target!'],
+        animation: [{ low: 0, high: 6, mid: 3 }, { low: 4, high: 6, mid: 5 }, { mid: 4, found: true }],
+        code: { python: '...' },
+        broken: { python: '...' },
+        test_cases: { python: '...' }
+      },
+      {
+        slug: 'bubble-sort',
+        title: 'Bubble Sort',
+        topic: 'Sorting',
+        narration: ['Compare elements.', 'Swap if out of order.'],
+        animation: [{ active: [0, 1] }, { active: [1, 2], swap: true }],
+        code: { python: '...' },
+        broken: { python: '...' },
+        test_cases: { python: '...' }
+      },
+      {
+        slug: 'stack-operations',
+        title: 'Stack Operations',
+        topic: 'Linear structures',
+        narration: ['Stack initialized.', 'Push 10.', 'Push 20.', 'Pop top element.'],
+        animation: [{ stack: [] }, { stack: [10] }, { stack: [10, 20] }, { stack: [10] }],
+        code: { python: '...' },
+        broken: { python: '...' },
+        test_cases: { python: '...' }
+      },
+      {
+        slug: 'two-pointers',
+        title: 'Two Pointers (Reverse Array)',
+        topic: 'Array logic',
+        narration: ['Left at 0, Right at 4.', 'Swap left and right.', 'Meet in middle.'],
+        animation: [{ left: 0, right: 4 }, { left: 1, right: 3 }, { left: 2, right: 2 }],
+        code: { python: '...' },
+        broken: { python: '...' },
+        test_cases: { python: '...' }
+      }
+    ];
+
+    for (const l of dsaLessons) {
+      await db.query(`
+        INSERT INTO dsa_lessons (slug, title, topic, narration_frames_json, animation_frames_json, code_by_lang_json, broken_version_by_lang_json, test_cases_json)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+        ON CONFLICT (slug) DO NOTHING
+      `, [
+        l.slug, l.title, l.topic,
+        JSON.stringify(l.narration),
+        JSON.stringify(l.animation),
+        JSON.stringify(l.code),
+        JSON.stringify(l.broken),
+        JSON.stringify(l.test_cases)
+      ]);
+    }
 
     console.log('Seed completed successfully!');
     process.exit(0);
