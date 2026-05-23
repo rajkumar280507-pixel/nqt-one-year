@@ -156,6 +156,13 @@ function runMockQuery(text, params = []) {
     return { rows: list, rowCount: list.length };
   }
 
+  if (queryText.includes('select id, leitner_box from vocab_cards')) {
+    const cardId = params[0];
+    const userId = params[1];
+    const card = vocabCardsMemory.find(c => c.id === cardId && c.user_id === userId);
+    return { rows: card ? [card] : [], rowCount: card ? 1 : 0 };
+  }
+
   if (queryText.includes('insert into vocab_cards')) {
     // user_id, term, meaning, example, tamil_gloss, hindi_gloss, source
     const userId = params[0];
@@ -304,6 +311,45 @@ function runMockQuery(text, params = []) {
           hint: "Loop through the array and accumulate values.",
           approach: "Initialize a sum variable to 0, iterate index 0 to N-1, add values, and print sum."
         }
+      ],
+      rowCount: 1
+    };
+  }
+
+  if (queryText.includes('select id, day_number, slot, title, difficulty, topic_id from coding_problems')) {
+    return {
+      rows: [
+        { id: 1, day_number: 1, slot: 1, title: "Sum of Array Elements", difficulty: "Easy", topic_id: 12 },
+        { id: 2, day_number: 2, slot: 1, title: "String Reversal", difficulty: "Easy", topic_id: 13 }
+      ],
+      rowCount: 2
+    };
+  }
+
+  // Mock Test Questions retrieval (between parameters)
+  if (queryText.includes('between') && queryText.includes('from questions')) {
+    const section = params[0];
+    const list = [];
+    for (let i = 1; i <= 25; i++) {
+      list.push({
+        id: 1000 + i,
+        day_number: 1,
+        section: section,
+        type: "MCQ",
+        question_text: `Mock ${section} Question ${i}`,
+        options_json: ["Option A", "Option B", "Option C", "Option D"],
+        correct_answer: "Option A",
+        solution_explanation: "This is a detailed mock explanation.",
+        difficulty: "Medium"
+      });
+    }
+    return { rows: list, rowCount: list.length };
+  }
+
+  if (queryText.includes('between') && queryText.includes('from coding_problems')) {
+    return {
+      rows: [
+        { id: 201, day_number: 1, slot: 1, title: "Mock Coding Problem 1", statement: "Write a program to print Hello World.", input_format: "None", output_format: "Print Hello World", constraints: "None", sample_tests_json: [{ input: "", output: "Hello World" }], hidden_tests_json: [{ input: "", output: "Hello World" }], hint: "Use print statement.", approach: "Use console log or print.", solution_code_by_lang_json: { python: "print('Hello World')" }, difficulty: "Easy" }
       ],
       rowCount: 1
     };
