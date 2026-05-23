@@ -10,7 +10,8 @@
     "preview": "vite preview",
     "start": "node server/index.js",
     "seed": "node server/seed.js",
-    "test": "node server/test-api.js"
+    "test": "node server/test-api.js",
+    "postinstall": "npm run build"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",
