@@ -1,4 +1,5 @@
 import db from './db.js';
+import { VOCABULARY_DATA, FORMULA_DATA, TRICK_DATA, DRILL_DATA } from './tricksData.js';
 
 const SECTIONS = {
   APTITUDE: 'Aptitude',
@@ -133,7 +134,7 @@ async function seed() {
   try {
     // Clear existing data
     console.log('Clearing database tables...');
-    await db.query('TRUNCATE user_mock_attempts, mock_tests, user_code_submissions, user_progress, coding_problems, questions, days, vocabulary, topics, users, stories, comics, listening, dsa_lessons CASCADE');
+    await db.query('TRUNCATE user_mock_attempts, mock_tests, user_code_submissions, user_progress, coding_problems, questions, days, vocabulary, topics, users, stories, comics, listening, dsa_lessons, sqltricks, quick_formulas, trick_drills, user_trick_mastery CASCADE');
     console.log('Database cleared.');
 
     // 1. Insert Topics
@@ -156,12 +157,11 @@ async function seed() {
     for (const [key, id] of Object.entries(topicMap)) {
       if (key.includes(':')) continue; // Skip composite keys
       
-      // Seed 8 terms for each topic
+      // Seed 8 terms for each topic - specific to the topic to avoid leakage
       for (let idx = 1; idx <= 8; idx++) {
-        const template = VOCAB_TEMPLATES[(idx - 1) % VOCAB_TEMPLATES.length];
-        const term = `${key} Term ${idx} (${template.term})`;
-        const meaning = `Specific definition of ${template.term} relative to ${key}. Context: ${template.meaning}`;
-        const example = `Here is a context sentence implementing the term '${template.term}' in a ${key} study problem.`;
+        const term = `${key} Core Concept ${idx}`;
+        const meaning = `A key definition and mathematical property of ${key} relative to its core syllabus.`;
+        const example = `Applying ${key} rules to solve test questions in practice drills.`;
         
         await db.query(
           'INSERT INTO vocabulary (topic_id, term, meaning, example_sentence) VALUES ($1, $2, $3, $4)',
@@ -852,6 +852,71 @@ async function seed() {
         JSON.stringify(l.test_cases)
       ]);
     }
+
+    // 5. Seed Trick Library (Vocabulary, Formulas, Tricks, Drills)
+    console.log('Inserting specialized trick library data...');
+    
+    // Insert additional vocabulary from tricksData.js
+    let specializedVocabCount = 0;
+    for (const v of VOCABULARY_DATA) {
+      const tId = topicMap[v.topic_name];
+      if (tId) {
+        await db.query(
+          'INSERT INTO vocabulary (topic_id, term, meaning, example_sentence) VALUES ($1, $2, $3, $4)',
+          [tId, v.term, v.meaning, v.example_sentence]
+        );
+        specializedVocabCount++;
+      }
+    }
+    console.log(`Seeded ${specializedVocabCount} specialized vocabulary items.`);
+
+    // Insert quick formulas
+    let formulaCount = 0;
+    for (const f of FORMULA_DATA) {
+      const tId = topicMap[f.topic_name];
+      if (tId) {
+        await db.query(
+          'INSERT INTO quick_formulas (topic_id, formula_text, use_when_hint) VALUES ($1, $2, $3)',
+          [tId, f.formula_text, f.use_when_hint]
+        );
+        formulaCount++;
+      }
+    }
+    console.log(`Seeded ${formulaCount} quick formulas.`);
+
+    // Insert tricks
+    let trickCount = 0;
+    const trickMap = {}; // mapping from trick name to its generated id for drills
+    for (const t of TRICK_DATA) {
+      const tId = topicMap[t.topic_name];
+      if (tId) {
+        const res = await db.query(
+          `INSERT INTO sqltricks 
+           (topic_id, position_order, name, spot_when, method_steps_json, worked_example_json, trap_text, long_vs_short_json, difficulty)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING id`,
+          [tId, t.position_order, t.name, t.spot_when, JSON.stringify(t.method_steps_json), JSON.stringify(t.worked_example_json), t.trap_text, JSON.stringify(t.long_vs_short_json), t.difficulty]
+        );
+        trickMap[t.name] = res.rows[0].id;
+        trickCount++;
+      }
+    }
+    console.log(`Seeded ${trickCount} tricks.`);
+
+    // Insert trick drills
+    let drillCount = 0;
+    for (const d of DRILL_DATA) {
+      const trkId = trickMap[d.trick_name];
+      if (trkId) {
+        await db.query(
+          `INSERT INTO trick_drills 
+           (trick_id, question_text, options_json, correct_answer, solution_using_trick, expected_solve_time_sec)
+           VALUES ($1, $2, $3, $4, $5, $6)`,
+          [trkId, d.question_text, JSON.stringify(d.options), d.correct_answer, d.solution_using_trick, d.expected_solve_time_sec]
+        );
+        drillCount++;
+      }
+    }
+    console.log(`Seeded ${drillCount} trick drills.`);
 
     console.log('Seed completed successfully!');
     process.exit(0);

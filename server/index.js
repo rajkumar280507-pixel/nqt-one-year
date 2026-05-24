@@ -23,7 +23,24 @@ app.use(express.json());
 // Initialize DB Tables
 async function initDB() {
   try {
-    // Create tables
+    try {
+      const tableInfo = await db.query(`
+        SELECT column_name 
+        FROM information_schema.columns 
+        WHERE table_name = 'sqltricks' AND column_name = 'section'
+      `);
+      if (tableInfo.rows.length === 0) {
+        console.log('Migrating sqltricks table to the new Tricks module schema...');
+        await db.query(`
+          DROP TABLE IF EXISTS user_trick_mastery CASCADE;
+          DROP TABLE IF EXISTS trick_drills CASCADE;
+          DROP TABLE IF EXISTS sqltricks CASCADE;
+        `);
+      }
+    } catch (e) {
+      // Table might not exist yet, ignore
+    }
+
     await db.query(`
       CREATE TABLE IF NOT EXISTS users (
         id SERIAL PRIMARY KEY,
@@ -189,6 +206,49 @@ async function initDB() {
         transcript TEXT NOT NULL,
         ai_feedback_json JSONB NOT NULL,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+
+      CREATE TABLE IF NOT EXISTS sqltricks (
+        id SERIAL PRIMARY KEY,
+        section VARCHAR(100) NOT NULL,
+        topic VARCHAR(255) NOT NULL,
+        trick_name VARCHAR(255) NOT NULL,
+        when_to_spot TEXT NOT NULL,
+        formula_text TEXT NOT NULL,
+        intuition TEXT NOT NULL,
+        trap_box TEXT NOT NULL,
+        worked_examples_json JSONB NOT NULL,
+        long_vs_short_examples_json JSONB NOT NULL,
+        difficulty_tier INTEGER NOT NULL DEFAULT 1,
+        prerequisite_trick_ids INTEGER[]
+      );
+
+      CREATE TABLE IF NOT EXISTS trick_drills (
+        id SERIAL PRIMARY KEY,
+        trick_id INTEGER REFERENCES sqltricks(id) ON DELETE CASCADE,
+        question_text TEXT NOT NULL,
+        options_json JSONB NOT NULL,
+        correct_answer VARCHAR(255) NOT NULL,
+        solution_using_trick TEXT NOT NULL,
+        expected_solve_time_sec INTEGER NOT NULL
+      );
+
+      CREATE TABLE IF NOT EXISTS quick_formulas (
+        id SERIAL PRIMARY KEY,
+        topic_id INTEGER REFERENCES topics(id) ON DELETE CASCADE,
+        formula_text VARCHAR(255) NOT NULL,
+        use_when_hint TEXT NOT NULL
+      );
+
+      CREATE TABLE IF NOT EXISTS user_trick_mastery (
+        user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+        trick_id INTEGER REFERENCES sqltricks(id) ON DELETE CASCADE,
+        drills_attempted INTEGER DEFAULT 0,
+        drills_correct INTEGER DEFAULT 0,
+        best_avg_time_sec REAL,
+        last_drilled_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        mastery_score INTEGER DEFAULT 0,
+        PRIMARY KEY (user_id, trick_id)
       );
     `);
     console.log('Database tables successfully checked/created.');
@@ -627,15 +687,41 @@ app.get('/api/progress/summary', authenticateToken, async (req, res) => {
 });
 
 // Topics list
-app.get('/api/topics', async (req, res) => {
+app.get('/api/topics', authenticateToken, async (req, res) => {
   try {
     const result = await db.query(
-      `SELECT t.*, COUNT(q.id) as questions_count 
-       FROM topics t 
-       LEFT JOIN days d ON d.concept_topic_id = t.id
-       LEFT JOIN questions q ON q.day_number = d.day_number
-       GROUP BY t.id 
-       ORDER BY t.section, t.name`
+      `SELECT 
+        t.id,
+        t.section,
+        t.name,
+        t.definition,
+        t.parent_topic_id,
+        COALESCE(v.vocab_count, 0)::integer as vocab_count,
+        COALESCE(tr.tricks_count, 0)::integer as tricks_count,
+        COALESCE(q.questions_count, 0)::integer as questions_count,
+        COALESCE(m.mastery_score, 0)::integer as mastery_score
+       FROM topics t
+       LEFT JOIN (
+         SELECT topic_id, COUNT(*) as vocab_count FROM vocabulary GROUP BY topic_id
+       ) v ON v.topic_id = t.id
+       LEFT JOIN (
+         SELECT topic_id, COUNT(*) as tricks_count FROM sqltricks GROUP BY topic_id
+       ) tr ON tr.topic_id = t.id
+       LEFT JOIN (
+         SELECT d.concept_topic_id, COUNT(*) as questions_count 
+         FROM questions q 
+         JOIN days d ON q.day_number = d.day_number 
+         GROUP BY d.concept_topic_id
+       ) q ON q.concept_topic_id = t.id
+       LEFT JOIN (
+         SELECT tr.topic_id, ROUND(AVG(utm.mastery_score)) as mastery_score
+         FROM sqltricks tr
+         JOIN user_trick_mastery utm ON utm.trick_id = tr.id
+         WHERE utm.user_id = $1
+         GROUP BY tr.topic_id
+       ) m ON m.topic_id = t.id
+       ORDER BY t.section, t.name`,
+      [req.user.id]
     );
     res.json(result.rows);
   } catch (err) {
@@ -670,6 +756,246 @@ app.get('/api/topics/:id', async (req, res) => {
       vocabulary: vocabResult.rows,
       questions: questionsResult.rows
     });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+function slugify(text) {
+  if (!text) return '';
+  return text
+    .toLowerCase()
+    .replace(/[^a-z0-9\s-]/g, '')
+    .replace(/\s+/g, '-')
+    .replace(/-+/g, '-');
+}
+
+// Get Topic by Slug (with vocabulary, formulas, tricks, and drills metadata)
+app.get('/api/topics/slug/:slug', authenticateToken, async (req, res) => {
+  const { slug } = req.params;
+  try {
+    const topicsRes = await db.query('SELECT * FROM topics');
+    const topic = topicsRes.rows.find(t => slugify(t.name) === slug);
+    if (!topic) {
+      return res.status(404).json({ error: 'Topic not found.' });
+    }
+
+    const topicId = topic.id;
+
+    // Fetch vocabulary
+    const vocabResult = await db.query('SELECT * FROM vocabulary WHERE topic_id = $1', [topicId]);
+
+    // Fetch formulas
+    const formulasResult = await db.query('SELECT * FROM quick_formulas WHERE topic_id = $1', [topicId]);
+
+    // Fetch tricks joined with user trick mastery
+    const tricksResult = await db.query(
+      `SELECT t.*, 
+              COALESCE(m.attempts, 0) as attempts, 
+              COALESCE(m.correct, 0) as correct, 
+              m.best_avg_time_sec, 
+              m.last_drilled_at, 
+              COALESCE(m.mastery_score, 0) as mastery_score 
+       FROM sqltricks t 
+       LEFT JOIN user_trick_mastery m ON t.id = m.trick_id AND m.user_id = $2
+       WHERE t.topic_id = $1 
+       ORDER BY t.position_order`,
+      [topicId, req.user.id]
+    );
+
+    // Fetch practice questions from days linked to this topic
+    const questionsResult = await db.query(
+      `SELECT q.id, q.day_number, q.section, q.type, q.question_text, q.options_json, q.difficulty 
+       FROM questions q 
+       JOIN days d ON q.day_number = d.day_number 
+       WHERE d.concept_topic_id = $1`,
+      [topicId]
+    );
+
+    // Also get user answers/progress for these questions
+    const progressResult = await db.query(
+      `SELECT day_number, section, attempts, correct_count 
+       FROM user_progress 
+       WHERE user_id = $1`,
+      [req.user.id]
+    );
+    const progressMap = {};
+    progressResult.rows.forEach(p => {
+      progressMap[`${p.day_number}:${p.section}`] = p;
+    });
+
+    // Attach answer & explanation to questions that the user has already attempted
+    const questions = await Promise.all(questionsResult.rows.map(async (q) => {
+      const isAttempted = progressMap[`${q.day_number}:${q.section}`] && progressMap[`${q.day_number}:${q.section}`].attempts > 0;
+      if (isAttempted) {
+        const fullQ = await db.query('SELECT correct_answer, solution_explanation FROM questions WHERE id = $1', [q.id]);
+        return {
+          ...q,
+          correct_answer: fullQ.rows[0].correct_answer,
+          solution_explanation: fullQ.rows[0].solution_explanation,
+          attempted: true
+        };
+      }
+      return { ...q, attempted: false };
+    }));
+
+    res.json({
+      topic,
+      vocabulary: vocabResult.rows,
+      formulas: formulasResult.rows,
+      tricks: tricksResult.rows,
+      questions,
+      progress: progressMap
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Get Trick Drill questions (3 random questions for the trick)
+app.get('/api/tricks/:trickId/drill', authenticateToken, async (req, res) => {
+  const trickId = parseInt(req.params.trickId);
+  try {
+    const drillResult = await db.query(
+      'SELECT id, trick_id, question_text, options_json, expected_solve_time_sec FROM trick_drills WHERE trick_id = $1',
+      [trickId]
+    );
+    const selected = selectRandom(drillResult.rows, 3);
+    res.json(selected);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Submit Trick Drill result
+app.post('/api/tricks/:trickId/drill/submit', authenticateToken, async (req, res) => {
+  const trickId = parseInt(req.params.trickId);
+  const { correctCount, timeTakenSec } = req.body;
+  const userId = req.user.id;
+
+  try {
+    const currentRes = await db.query(
+      'SELECT * FROM user_trick_mastery WHERE user_id = $1 AND trick_id = $2',
+      [userId, trickId]
+    );
+
+    let attempts = 3;
+    let correct = correctCount || 0;
+    let bestAvgTime = parseFloat(timeTakenSec) / 3;
+    let masteryScore = 0;
+
+    let diff = -20;
+    if (correct === 3) diff = 35;
+    else if (correct === 2) diff = 10;
+
+    if (currentRes.rows.length > 0) {
+      const current = currentRes.rows[0];
+      attempts = current.attempts + 3;
+      correct = current.correct + correctCount;
+      if (current.best_avg_time_sec) {
+        bestAvgTime = Math.min(current.best_avg_time_sec, bestAvgTime);
+      }
+      masteryScore = Math.max(0, Math.min(100, current.mastery_score + diff));
+
+      await db.query(
+        `UPDATE user_trick_mastery 
+         SET attempts = $1, correct = $2, best_avg_time_sec = $3, last_drilled_at = CURRENT_TIMESTAMP, mastery_score = $4
+         WHERE user_id = $5 AND trick_id = $6`,
+        [attempts, correct, bestAvgTime, masteryScore, userId, trickId]
+      );
+    } else {
+      masteryScore = Math.max(0, Math.min(100, diff));
+      await db.query(
+        `INSERT INTO user_trick_mastery (user_id, trick_id, attempts, correct, best_avg_time_sec, mastery_score)
+         VALUES ($1, $2, $3, $4, $5, $6)`,
+        [userId, trickId, attempts, correct, bestAvgTime, masteryScore]
+      );
+    }
+
+    const trickRes = await db.query(
+      'SELECT t.topic_id, d.day_number FROM sqltricks t JOIN days d ON d.concept_topic_id = t.topic_id WHERE t.id = $1 LIMIT 1',
+      [trickId]
+    );
+
+    let dayNumber = 1;
+    if (trickRes.rows.length > 0) {
+      dayNumber = trickRes.rows[0].day_number;
+    }
+
+    const sectionName = `Trick Drill ${trickId}`;
+    await db.query(
+      `INSERT INTO user_progress (user_id, day_number, section, attempts, correct_count)
+       VALUES ($1, $2, $3, 1, $4)
+       ON CONFLICT (user_id, day_number, section) 
+       DO UPDATE SET attempts = user_progress.attempts + 1, correct_count = user_progress.correct_count + $4`,
+      [userId, dayNumber, sectionName, correctCount === 3 ? 1 : 0]
+    );
+
+    const streak = await recalculateStreak(userId);
+
+    res.json({
+      success: true,
+      masteryScore,
+      streak
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Get Speed Drill questions (10 random questions from topic's tricks)
+app.get('/api/topics/slug/:slug/speed-drill', authenticateToken, async (req, res) => {
+  const { slug } = req.params;
+  try {
+    const topicsRes = await db.query('SELECT id FROM topics');
+    const topic = topicsRes.rows.find(t => slugify(t.name) === slug);
+    if (!topic) {
+      return res.status(404).json({ error: 'Topic not found.' });
+    }
+
+    const topicId = topic.id;
+    const drillsRes = await db.query(
+      `SELECT d.id, d.trick_id, d.question_text, d.options_json, d.expected_solve_time_sec, t.name as trick_name
+       FROM trick_drills d
+       JOIN sqltricks t ON d.trick_id = t.id
+       WHERE t.topic_id = $1`,
+      [topicId]
+    );
+
+    const selected = selectRandom(drillsRes.rows, 10);
+    res.json(selected);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Submit Speed Drill results
+app.post('/api/topics/slug/:slug/speed-drill/submit', authenticateToken, async (req, res) => {
+  const { slug } = req.params;
+  const { correctCount, timeTakenSec } = req.body;
+  const userId = req.user.id;
+  try {
+    const topicsRes = await db.query('SELECT id FROM topics');
+    const topic = topicsRes.rows.find(t => slugify(t.name) === slug);
+    if (!topic) {
+      return res.status(404).json({ error: 'Topic not found.' });
+    }
+
+    const topicId = topic.id;
+    const trickRes = await db.query('SELECT day_number FROM days WHERE concept_topic_id = $1 LIMIT 1', [topicId]);
+    const dayNumber = trickRes.rows.length > 0 ? trickRes.rows[0].day_number : 1;
+
+    const sectionName = `Speed Drill ${topicId}`;
+    await db.query(
+      `INSERT INTO user_progress (user_id, day_number, section, attempts, correct_count)
+       VALUES ($1, $2, $3, 1, $4)
+       ON CONFLICT (user_id, day_number, section) 
+       DO UPDATE SET attempts = user_progress.attempts + 1, correct_count = user_progress.correct_count + $4`,
+      [userId, dayNumber, sectionName, correctCount >= 6 ? 1 : 0]
+    );
+
+    const streak = await recalculateStreak(userId);
+    res.json({ success: true, streak });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -1253,6 +1579,126 @@ app.get('/api/dsa/lesson/:slug', authenticateToken, async (req, res) => {
       return res.status(404).json({ error: 'DSA animated lesson not found.' });
     }
     res.json(result.rows[0]);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ==========================================
+// Aptitude Tricks & Mastery APIs
+// ==========================================
+app.get('/api/tricks', authenticateToken, async (req, res) => {
+  try {
+    const result = await db.query(
+      `SELECT t.*, 
+              COALESCE(m.drills_attempted, 0) as drills_attempted,
+              COALESCE(m.drills_correct, 0) as drills_correct,
+              m.best_avg_time_sec,
+              m.last_drilled_at,
+              COALESCE(m.mastery_score, 0) as mastery_score
+       FROM sqltricks t
+       LEFT JOIN user_trick_mastery m ON t.id = m.trick_id AND m.user_id = $1
+       ORDER BY t.section, t.id`,
+      [req.user.id]
+    );
+    res.json(result.rows);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.get('/api/tricks/:id', authenticateToken, async (req, res) => {
+  const trickId = parseInt(req.params.id);
+  if (isNaN(trickId)) {
+    return res.status(400).json({ error: 'Invalid trick ID.' });
+  }
+
+  try {
+    const trickRes = await db.query(
+      `SELECT t.*, 
+              COALESCE(m.drills_attempted, 0) as drills_attempted,
+              COALESCE(m.drills_correct, 0) as drills_correct,
+              m.best_avg_time_sec,
+              m.last_drilled_at,
+              COALESCE(m.mastery_score, 0) as mastery_score
+       FROM sqltricks t
+       LEFT JOIN user_trick_mastery m ON t.id = m.trick_id AND m.user_id = $1
+       WHERE t.id = $2`,
+      [req.user.id, trickId]
+    );
+
+    if (trickRes.rows.length === 0) {
+      return res.status(404).json({ error: 'Trick not found.' });
+    }
+
+    const drillsRes = await db.query(
+      `SELECT id, question_text, options_json, correct_answer, solution_using_trick, expected_solve_time_sec
+       FROM trick_drills
+       WHERE trick_id = $1
+       LIMIT 10`,
+      [trickId]
+    );
+
+    res.json({
+      trick: trickRes.rows[0],
+      drills: drillsRes.rows
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.post('/api/tricks/:id/drill', authenticateToken, async (req, res) => {
+  const trickId = parseInt(req.params.id);
+  const { accuracy, avgTimeSec, drillCorrect, drillTotal } = req.body;
+
+  if (isNaN(trickId) || accuracy === undefined || avgTimeSec === undefined || drillCorrect === undefined || drillTotal === undefined) {
+    return res.status(400).json({ error: 'Required fields are missing.' });
+  }
+
+  try {
+    const trickRes = await db.query('SELECT * FROM sqltricks WHERE id = $1', [trickId]);
+    if (trickRes.rows.length === 0) {
+      return res.status(404).json({ error: 'Trick not found.' });
+    }
+
+    const expectedTime = 30; // standard 30s per question
+    const correctPct = accuracy; // 0 to 100
+    const timeScore = 100 * Math.max(0, 1 - (avgTimeSec - expectedTime) / expectedTime);
+    const recencyScore = 100;
+    const masteryScore = Math.min(100, Math.round(0.5 * correctPct + 0.3 * timeScore + 0.2 * recencyScore));
+
+    const existingRes = await db.query(
+      `SELECT drills_attempted, best_avg_time_sec 
+       FROM user_trick_mastery 
+       WHERE user_id = $1 AND trick_id = $2`,
+      [req.user.id, trickId]
+    );
+
+    if (existingRes.rows.length === 0) {
+      await db.query(
+        `INSERT INTO user_trick_mastery 
+         (user_id, trick_id, drills_attempted, drills_correct, best_avg_time_sec, last_drilled_at, mastery_score)
+         VALUES ($1, $2, $3, $4, $5, NOW(), $6)`,
+         [req.user.id, trickId, drillTotal, drillCorrect, avgTimeSec, masteryScore]
+      );
+    } else {
+      const current = existingRes.rows[0];
+      const bestTime = current.best_avg_time_sec ? Math.min(current.best_avg_time_sec, avgTimeSec) : avgTimeSec;
+      
+      await db.query(
+        `UPDATE user_trick_mastery
+         SET drills_attempted = drills_attempted + $1,
+             drills_correct = drills_correct + $2,
+             best_avg_time_sec = $3,
+             last_drilled_at = NOW(),
+             mastery_score = $4
+         WHERE user_id = $5 AND trick_id = $6`,
+        [drillTotal, drillCorrect, bestTime, masteryScore, req.user.id, trickId]
+      );
+    }
+
+    res.json({ success: true, masteryScore });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

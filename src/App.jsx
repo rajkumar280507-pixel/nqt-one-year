@@ -13,6 +13,10 @@ import Admin from './pages/Admin';
 import DsaLab from './pages/DsaLab';
 import English from './pages/English';
 import AiTutor from './pages/AiTutor';
+import Tricks from './pages/Tricks';
+import TopicDetail from './pages/TopicDetail';
+import TrickDrill from './pages/TrickDrill';
+import SpeedDrill from './pages/SpeedDrill';
 
 export default function App() {
   const [token, setToken] = useState(localStorage.getItem('token') || '');
@@ -54,7 +58,7 @@ export default function App() {
 
   return (
     <Router>
-      <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 flex flex-col transition-colors duration-200">
+      <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-700 dark:text-slate-200 flex flex-col transition-colors duration-200">
         {isAuthenticated && (
           <Navbar 
             user={user} 
@@ -64,7 +68,7 @@ export default function App() {
           />
         )}
         
-        <main className="flex-1 w-full pb-16 md:pb-0">
+        <main className="flex-1 w-full pb-16 md:pb-0 text-slate-700 dark:text-slate-200">
           <Routes>
             {/* Public Routes */}
             <Route 
@@ -112,6 +116,22 @@ export default function App() {
             <Route 
               path="/ai-tutor" 
               element={isAuthenticated ? <AiTutor token={token} user={user} /> : <Navigate to="/login" />} 
+            />
+            <Route 
+              path="/tricks" 
+              element={isAuthenticated ? <Tricks token={token} user={user} /> : <Navigate to="/login" />} 
+            />
+            <Route
+              path="/topics/:slug"
+              element={isAuthenticated ? <TopicDetail token={token} user={user} /> : <Navigate to="/login" />}
+            />
+            <Route
+              path="/topics/:slug/trick/:trickId/drill"
+              element={isAuthenticated ? <TrickDrill token={token} user={user} /> : <Navigate to="/login" />}
+            />
+            <Route
+              path="/topics/:slug/speed-drill"
+              element={isAuthenticated ? <SpeedDrill token={token} user={user} /> : <Navigate to="/login" />}
             />
 
             {/* Admin Route */}

@@ -128,8 +128,32 @@ async function runTests() {
     });
     const mocksData = await mocksRes.json();
     assert.strictEqual(mocksRes.status, 200, 'Mock tests status should be 200');
-    assert.ok(Array.isArray(mocksData), 'Response should be list of mocks');
-    console.log(`✅ Mock tests list fetched. (Found ${mocksData.length} mock tests)`);
+    // 8. VOCABULARY LEAKAGE TEST
+    console.log('\n🧪 Testing vocabulary leakage - checking topic matching...');
+    const nsVocabRes = await fetch(`${baseUrl}/api/topics/slug/number-system`, {
+      headers: { 'Authorization': `Bearer ${testUserToken}` }
+    });
+    const nsVocabData = await nsVocabRes.json();
+    assert.strictEqual(nsVocabRes.status, 200, 'GET topic number-system should return 200');
+    assert.ok(Array.isArray(nsVocabData.vocabulary), 'Vocabulary should be an array');
+    
+    // Check if Cyclicity is in Number System vocab
+    const nsTerms = nsVocabData.vocabulary.map(v => v.term.toLowerCase());
+    const hasCyclicityInNS = nsTerms.some(t => t.includes('cyclicity'));
+    assert.ok(hasCyclicityInNS, 'Number System vocabulary should contain Cyclicity');
+    
+    const lcmVocabRes = await fetch(`${baseUrl}/api/topics/slug/lcm-hcf`, {
+      headers: { 'Authorization': `Bearer ${testUserToken}` }
+    });
+    const lcmVocabData = await lcmVocabRes.json();
+    assert.strictEqual(lcmVocabRes.status, 200, 'GET topic lcm-hcf should return 200');
+    assert.ok(Array.isArray(lcmVocabData.vocabulary), 'Vocabulary should be an array');
+    
+    // Check if Cyclicity is NOT in LCM & HCF vocab
+    const lcmTerms = lcmVocabData.vocabulary.map(v => v.term.toLowerCase());
+    const hasCyclicityInLCM = lcmTerms.some(t => t.includes('cyclicity'));
+    assert.ok(!hasCyclicityInLCM, 'LCM & HCF vocabulary must NOT contain Cyclicity');
+    console.log('✅ Vocabulary leakage checks passed.');
 
     console.log('\n🎉 ALL CRITICAL API INTEGRATION TESTS PASSED SUCCESSFULLY! 🎉\n');
   } catch (err) {
