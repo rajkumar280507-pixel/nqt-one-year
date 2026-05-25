@@ -666,6 +666,47 @@ const mockTopics = [
   { id: 13, section: "Coding", name: "String Operations", definition: "Length calculation, reversals, palindromes, and anagram checks.", questions_count: 3 }
 ];
 
+const aptitudePool = [
+  { question_text: "Find the HCF of 108 and 288.", options_json: ["12", "18", "36", "72"], correct_answer: "36", solution_explanation: "108 = 36 * 3, 288 = 36 * 8. The highest common factor is 36." },
+  { question_text: "What is the units digit of 7^105?", options_json: ["7", "9", "3", "1"], correct_answer: "7", solution_explanation: "Cyclicity of 7 is 4. 105 % 4 = 1. So 7^1 = 7." },
+  { question_text: "If the price of sugar increases by 25%, by what percentage must a household reduce its consumption so that the expenditure remains constant?", options_json: ["20%", "25%", "15%", "10%"], correct_answer: "20%", solution_explanation: "Reduction = [25 / (100 + 25)] * 100 = 20%." },
+  { question_text: "By selling a toy for Rs. 240, a dealer loses 10%. For how much should he sell it to gain 20%?", options_json: ["Rs. 320", "Rs. 280", "Rs. 300", "Rs. 260"], correct_answer: "Rs. 320", solution_explanation: "New SP = 240 * (120 / 90) = Rs. 320." },
+  { question_text: "A train of length 150 meters crosses a platform of length 250 meters in 20 seconds. What is the speed of the train in km/h?", options_json: ["72 km/h", "54 km/h", "90 km/h", "60 km/h"], correct_answer: "72 km/h", solution_explanation: "Total distance = 400m. Speed = 400 / 20 = 20 m/s = 72 km/h." },
+  { question_text: "In a simultaneous throw of two dice, what is the probability of obtaining a total sum of 8?", options_json: ["5/36", "1/6", "7/36", "1/12"], correct_answer: "5/36", solution_explanation: "Favorable pairs are (2,6), (3,5), (4,4), (5,3), (6,2). Prob = 5/36." },
+  { question_text: "Find the single discount equivalent to two successive discounts of 20% and 10%.", options_json: ["28%", "30%", "25%", "22%"], correct_answer: "28%", solution_explanation: "Net Discount = 20 + 10 - (20 * 10 / 100) = 28%." },
+  { question_text: "A merchant sells two radios for Rs. 1200 each, gaining 20% on one and losing 20% on the other. What is his net gain or loss percentage?", options_json: ["4% loss", "4% gain", "No profit/loss", "2% loss"], correct_answer: "4% loss", solution_explanation: "Loss % = 20^2 / 100 = 4%." },
+  { question_text: "A shopkeeper sells his goods at cost price but uses a weight of 960 grams for a kg. Find his profit percentage.", options_json: ["4.17%", "4%", "4.35%", "3.85%"], correct_answer: "4.17%", solution_explanation: "Profit % = (40 / 960) * 100 = 4.17%." },
+  { question_text: "If the cost price of 15 pens is equal to the selling price of 12 pens, find the gain percentage.", options_json: ["25%", "20%", "30%", "15%"], correct_answer: "25%", solution_explanation: "Profit % = (15 - 12) / 12 * 100 = 25%." },
+  { question_text: "Find the number of trailing zeros in 100!.", options_json: ["24", "20", "25", "22"], correct_answer: "24", solution_explanation: "100/5 = 20; 100/25 = 4. Total = 24 trailing zeros." },
+  { question_text: "Find the last two digits of 11^23.", options_json: ["31", "11", "21", "41"], correct_answer: "31", solution_explanation: "Last digit is 1. Tens digit is (1 * 3) % 10 = 3. So 31." },
+  { question_text: "Find the total number of factors of 360.", options_json: ["24", "18", "30", "12"], correct_answer: "24", solution_explanation: "360 = 2^3 * 3^2 * 5^1. Factors = (3+1)*(2+1)*(1+1) = 24." },
+  { question_text: "If a price is discounted by 30% and then by 20%, find the single discount equivalent.", options_json: ["44%", "50%", "40%", "45%"], correct_answer: "44%", solution_explanation: "Net = 30 + 20 - (30 * 20 / 100) = 44%." },
+  { question_text: "A price rises 10% and then rises 10% again. Find the net increase.", options_json: ["21%", "20%", "22%", "19%"], correct_answer: "21%", solution_explanation: "Net = 10 + 10 + (10 * 10 / 100) = 21%." }
+];
+
+const reasoningPool = [
+  { question_text: "Identify the missing term in the sequence: 2, 6, 18, 54, ?", options_json: ["162", "108", "216", "144"], correct_answer: "162", solution_explanation: "Each term is multiplied by 3. 54 * 3 = 162." },
+  { question_text: "Pointing to a photograph, a man says, 'I have no brother or sister, but that man's father is my father's son.' Whose photograph is it?", options_json: ["His son's", "His own", "His father's", "His nephew's"], correct_answer: "His son's", solution_explanation: "Since he has no siblings, my father's son is himself. So, that man's father is himself." },
+  { question_text: "If A + B means A is brother of B, and B + C means B is brother of C, what does A + B + C mean?", options_json: ["A is brother of C", "A is cousin of C", "A is uncle of C", "None of these"], correct_answer: "A is brother of C", solution_explanation: "Since A is brother of B and B is brother of C, A is brother of C." },
+  { question_text: "In a certain code, TEACHER is written as VGCEJGT. How is CHILDREN written in that code?", options_json: ["EJKNFTGP", "EJKNDGFP", "EJKNFGTO", "EJKNFTGP"], correct_answer: "EJKNFTGP", solution_explanation: "Each letter is shifted by +2 positions in the alphabet." },
+  { question_text: "A man walks 5 km East, then turns right and walks 12 km. How far is he from his starting point?", options_json: ["13 km", "17 km", "15 km", "10 km"], correct_answer: "13 km", solution_explanation: "Using Pythagoras theorem: sqrt(5^2 + 12^2) = sqrt(25 + 144) = 13 km." }
+];
+
+const verbalPool = [
+  { question_text: "Find the synonym of the word: 'Prudent'", options_json: ["Wise", "Careless", "Rash", "Impulsive"], correct_answer: "Wise", solution_explanation: "Prudent means showing care and thought for the future. Wise is the closest synonym." },
+  { question_text: "Find the synonym of the word: 'Benevolent'", options_json: ["Kind", "Cruel", "Selfish", "Hostile"], correct_answer: "Kind", solution_explanation: "Benevolent means well-meaning and kindly. Kind is a direct synonym." },
+  { question_text: "Find the synonym of the word: 'Frugal'", options_json: ["Thrifty", "Extravagant", "Wasteful", "Generous"], correct_answer: "Thrifty", solution_explanation: "Frugal means sparing or economical with regard to money. Thrifty is a synonym." },
+  { question_text: "Replace the underlined phrase: 'Neither the teacher nor the students is present.'", options_json: ["Neither the teacher nor the students are present", "Neither the teacher nor the students is present", "Either the teacher nor the students are present", "Neither the teacher or the students is present"], correct_answer: "Neither the teacher nor the students are present", solution_explanation: "Verb agrees with the closer subject 'students', which is plural." },
+  { question_text: "Replace the underlined phrase: 'He has been working in this company since five years.'", options_json: ["for five years", "since five years", "from five years", "during five years"], correct_answer: "for five years", solution_explanation: "'For' is used for a duration/period of time." }
+];
+
+const programmingPool = [
+  { question_text: "Predict output: int a = 5, b = 2; printf(\"%d\", a & b);", options_json: ["0", "7", "2", "5"], correct_answer: "0", solution_explanation: "5 (101) & 2 (010) = 0." },
+  { question_text: "Predict output: x = [1, 2, 3]; y = [val * 2 for val in x if val % 2 == 0]; print(y)", options_json: ["[4]", "[2, 4, 6]", "[]", "SyntaxError"], correct_answer: "[4]", solution_explanation: "Only 2 is even, 2 * 2 = 4. Result is [4]." },
+  { question_text: "What is the default return value of a function in Python that doesn't have a return statement?", options_json: ["None", "0", "False", "Null"], correct_answer: "None", solution_explanation: "Python functions implicitly return None if no return statement is executed." },
+  { question_text: "Which of the following data structures operates on a LIFO (Last In First Out) basis?", options_json: ["Stack", "Queue", "Array", "Linked List"], correct_answer: "Stack", solution_explanation: "A stack inserts and removes elements from the same end, acting as LIFO." }
+];
+
 function runMockQuery(text, params = []) {
   const queryText = text.trim().toLowerCase();
 
@@ -754,7 +795,7 @@ function runMockQuery(text, params = []) {
   }
 
   if (queryText.includes('select t.*, count(q.id) as questions_count') || 
-      (queryText.includes('from topics') && (queryText.includes('vocab_count') || queryText.includes('tricks_count')) && !queryText.includes('where'))) {
+      (queryText.includes('from topics') && (queryText.includes('vocab_count') || queryText.includes('tricks_count')) && !queryText.includes('where id =') && !queryText.includes('where t.id ='))) {
     const userId = params[0];
     const rows = mockTopics.map(topic => {
       const vocabCount = VOCABULARY_DATA.filter(v => v.topic_name === topic.name).length || 8;
@@ -1056,11 +1097,27 @@ function runMockQuery(text, params = []) {
         rows: [{ correct_answer: "A is brother of C", solution_explanation: "Since A is brother of B and B is brother of C, A is brother of C." }],
         rowCount: 1
       };
-    } else if (qId > 1000) {
-      return {
-        rows: [{ correct_answer: "Option A", solution_explanation: "This is a detailed mock explanation." }],
-        rowCount: 1
-      };
+    } else if (qId >= 1000) {
+      let q = null;
+      if (qId >= 4000) {
+        const idx = (qId - 4000 - 1) % programmingPool.length;
+        q = programmingPool[idx];
+      } else if (qId >= 3000) {
+        const idx = (qId - 3000 - 1) % verbalPool.length;
+        q = verbalPool[idx];
+      } else if (qId >= 2000) {
+        const idx = (qId - 2000 - 1) % reasoningPool.length;
+        q = reasoningPool[idx];
+      } else if (qId >= 1000) {
+        const idx = (qId - 1000 - 1) % aptitudePool.length;
+        q = aptitudePool[idx];
+      }
+      if (q) {
+        return {
+          rows: [{ correct_answer: q.correct_answer, solution_explanation: q.solution_explanation }],
+          rowCount: 1
+        };
+      }
     }
     return {
       rows: [{ correct_answer: "3", solution_explanation: "Cyclicity of 3 is 4. 41 % 4 = 1. 3^1 = 3." }],
@@ -1106,16 +1163,36 @@ function runMockQuery(text, params = []) {
   if (queryText.includes('between') && queryText.includes('from questions')) {
     const section = params[0];
     const list = [];
-    for (let i = 1; i <= 25; i++) {
+    
+    let pool = aptitudePool;
+    let baseId = 1000;
+    let count = 20;
+
+    if (section === 'Reasoning') {
+      pool = reasoningPool;
+      baseId = 2000;
+      count = 25;
+    } else if (section === 'Verbal') {
+      pool = verbalPool;
+      baseId = 3000;
+      count = 20;
+    } else if (section === 'Programming Logic') {
+      pool = programmingPool;
+      baseId = 4000;
+      count = 15;
+    }
+
+    for (let i = 0; i < count; i++) {
+      const q = pool[i % pool.length];
       list.push({
-        id: 1000 + i,
+        id: baseId + i + 1,
         day_number: 1,
         section: section,
         type: "MCQ",
-        question_text: `Mock ${section} Question ${i}`,
-        options_json: ["Option A", "Option B", "Option C", "Option D"],
-        correct_answer: "Option A",
-        solution_explanation: "This is a detailed mock explanation.",
+        question_text: q.question_text,
+        options_json: q.options_json,
+        correct_answer: q.correct_answer,
+        solution_explanation: q.solution_explanation,
         difficulty: "Medium"
       });
     }
@@ -1314,8 +1391,8 @@ export default {
     try {
       return await pool.query(text, params);
     } catch (err) {
-      if (err.code === 'ECONNREFUSED' || err.message.includes('connect')) {
-        console.warn('PostgreSQL Database connection lost. Falling back to resilient in-memory client.');
+      if (err.code === 'ECONNREFUSED' || err.message.includes('connect') || err.code === '28000' || err.message.includes('authentication')) {
+        console.warn('PostgreSQL Database connection lost or auth failed. Falling back to resilient in-memory client.');
         useMockDb = true;
         return runMockQuery(text, params);
       }
