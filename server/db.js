@@ -1081,12 +1081,19 @@ function runMockQuery(text, params = []) {
   // 6. MCQs (questions)
   if (queryText.includes('select id, section, type, question_text, options_json, difficulty from questions')) {
     const dayNum = params[0];
+    const aptQ = aptitudePool[dayNum % aptitudePool.length];
+    const reasoningQ = reasoningPool[dayNum % reasoningPool.length];
+    const verbalQ = verbalPool[dayNum % verbalPool.length];
+    const progQ = programmingPool[dayNum % programmingPool.length];
+
     return {
       rows: [
-        { id: 1, day_number: dayNum, section: "Aptitude", type: "MCQ", question_text: "Find the unit digit of 3^41.", options_json: ["1", "3", "7", "9"], correct_answer: "3", solution_explanation: "Cyclicity of 3 is 4. 41 % 4 = 1. 3^1 = 3.", difficulty: "Easy" },
-        { id: 2, day_number: dayNum, section: "Reasoning", type: "MCQ", question_text: "If A+B means A is brother of B, what does A+B+C mean?", options_json: ["A is brother of C", "A is cousin of C", "A is uncle of C", "None of these"], correct_answer: "A is brother of C", solution_explanation: "Since A is brother of B and B is brother of C, A is brother of C.", difficulty: "Medium" }
+        { id: 10000 + (dayNum * 10) + 1, day_number: dayNum, section: "Aptitude", type: "MCQ", question_text: aptQ.question_text, options_json: aptQ.options_json, correct_answer: aptQ.correct_answer, solution_explanation: aptQ.solution_explanation, difficulty: "Easy" },
+        { id: 10000 + (dayNum * 10) + 2, day_number: dayNum, section: "Reasoning", type: "MCQ", question_text: reasoningQ.question_text, options_json: reasoningQ.options_json, correct_answer: reasoningQ.correct_answer, solution_explanation: reasoningQ.solution_explanation, difficulty: "Medium" },
+        { id: 10000 + (dayNum * 10) + 3, day_number: dayNum, section: "Verbal", type: "MCQ", question_text: verbalQ.question_text, options_json: verbalQ.options_json, correct_answer: verbalQ.correct_answer, solution_explanation: verbalQ.solution_explanation, difficulty: "Easy" },
+        { id: 10000 + (dayNum * 10) + 4, day_number: dayNum, section: "Programming Logic", type: "MCQ", question_text: progQ.question_text, options_json: progQ.options_json, correct_answer: progQ.correct_answer, solution_explanation: progQ.solution_explanation, difficulty: "Medium" }
       ],
-      rowCount: 2
+      rowCount: 4
     };
   }
 
@@ -1097,6 +1104,25 @@ function runMockQuery(text, params = []) {
         rows: [{ correct_answer: "A is brother of C", solution_explanation: "Since A is brother of B and B is brother of C, A is brother of C." }],
         rowCount: 1
       };
+    } else if (qId >= 10000 && qId < 20000) {
+      const dayNum = Math.floor((qId - 10000) / 10);
+      const secIndex = (qId - 10000) % 10;
+      let q = null;
+      if (secIndex === 1) {
+        q = aptitudePool[dayNum % aptitudePool.length];
+      } else if (secIndex === 2) {
+        q = reasoningPool[dayNum % reasoningPool.length];
+      } else if (secIndex === 3) {
+        q = verbalPool[dayNum % verbalPool.length];
+      } else if (secIndex === 4) {
+        q = programmingPool[dayNum % programmingPool.length];
+      }
+      if (q) {
+        return {
+          rows: [{ correct_answer: q.correct_answer, solution_explanation: q.solution_explanation }],
+          rowCount: 1
+        };
+      }
     } else if (qId >= 1000) {
       let q = null;
       if (qId >= 4000) {
