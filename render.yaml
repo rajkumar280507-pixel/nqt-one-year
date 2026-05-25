@@ -1,26 +1,11 @@
 services:
   - type: web
-    name: nqt-one-year
+    name: tcs-nqt-platform
     env: node
-    plan: free
-    buildCommand: npm install && npm run build
+    buildCommand: npm install
     startCommand: npm start
     envVars:
-      - key: DATABASE_URL
-        fromDatabase:
-          name: nqt-db
-          property: connectionString
-      - key: JWT_SECRET
-        generateValue: true
-      - key: ADMIN_EMAIL
-        sync: false
-      - key: GROQ_API_KEY
-        sync: false
-      - key: GEMINI_API_KEY
-        sync: false
-
-databases:
-  - name: nqt-db
-    plan: free
-    databaseName: nqt
-    user: nqt
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 10000
