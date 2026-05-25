@@ -613,6 +613,11 @@ const mockTricks = [
 ];
 
 const userTrickMasteryMemory = [];
+const attemptsMemory = [];
+const usersMemory = [];
+const vocabCardsMemory = [];
+const progressMemory = [];
+const submissionsMemory = [];
 
 function getMockTrickName(trickId) {
   let name = null;
