@@ -645,9 +645,6 @@ function getMockDrillsForTrick(trickId) {
   }));
 }
 
-  return drills;
-}
-
 const mockTopics = [
   { id: 1, section: "Aptitude", name: "Number System", definition: "Integers, prime numbers, rational numbers, cyclicity, unit digit calculations.", questions_count: 5 },
   { id: 2, section: "Aptitude", name: "LCM & HCF", definition: "Least Common Multiple and Highest Common Factor relationships and word problems.", questions_count: 4 },
