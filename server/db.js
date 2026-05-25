@@ -1050,6 +1050,18 @@ function runMockQuery(text, params = []) {
   }
 
   if (queryText.includes('select correct_answer, solution_explanation from questions where id =')) {
+    const qId = params[0];
+    if (qId === 2) {
+      return {
+        rows: [{ correct_answer: "A is brother of C", solution_explanation: "Since A is brother of B and B is brother of C, A is brother of C." }],
+        rowCount: 1
+      };
+    } else if (qId > 1000) {
+      return {
+        rows: [{ correct_answer: "Option A", solution_explanation: "This is a detailed mock explanation." }],
+        rowCount: 1
+      };
+    }
     return {
       rows: [{ correct_answer: "3", solution_explanation: "Cyclicity of 3 is 4. 41 % 4 = 1. 3^1 = 3." }],
       rowCount: 1
@@ -1120,8 +1132,15 @@ function runMockQuery(text, params = []) {
   }
 
   if (queryText.includes('select solution_code_by_lang_json from coding_problems where id =')) {
+    const cpId = params[0];
+    let solution = { python: "def sum_arr(arr):\n    return sum(arr)" };
+    if (cpId === 2) {
+      solution = { python: "def reverse_string(s):\n    return s[::-1]" };
+    } else if (cpId === 201) {
+      solution = { python: "print('Hello World')" };
+    }
     return {
-      rows: [{ solution_code_by_lang_json: { python: "def sum_arr(arr):\n    return sum(arr)" } }],
+      rows: [{ solution_code_by_lang_json: solution }],
       rowCount: 1
     };
   }
