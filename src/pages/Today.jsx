@@ -48,6 +48,14 @@ export default function Today({ token, user, updateUserData }) {
   useEffect(() => {
     if (dayNumber) {
       fetchDayData();
+      setSelectedAnswers({});
+      setRevealedSolutions({});
+      setActiveCodingTab(0);
+      setRevealedHints({});
+      setRevealedApproaches({});
+      setRevealedCodes({});
+      setCodeRunResults({});
+      setActiveSection('concept');
     }
   }, [dayNumber]);
 
