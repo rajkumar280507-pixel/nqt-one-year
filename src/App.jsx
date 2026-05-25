@@ -13,7 +13,6 @@ import Admin from './pages/Admin';
 import DsaLab from './pages/DsaLab';
 import English from './pages/English';
 import AiTutor from './pages/AiTutor';
-import Tricks from './pages/Tricks';
 import TopicDetail from './pages/TopicDetail';
 import TrickDrill from './pages/TrickDrill';
 import SpeedDrill from './pages/SpeedDrill';
@@ -116,10 +115,6 @@ export default function App() {
             <Route 
               path="/ai-tutor" 
               element={isAuthenticated ? <AiTutor token={token} user={user} /> : <Navigate to="/login" />} 
-            />
-            <Route 
-              path="/tricks" 
-              element={isAuthenticated ? <Tricks token={token} user={user} /> : <Navigate to="/login" />} 
             />
             <Route
               path="/topics/:slug"
